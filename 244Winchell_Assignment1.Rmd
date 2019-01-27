@@ -1,0 +1,109 @@
+---
+title: "244_Winchell_Assignment1"
+author: "Alyssa Winchell"
+date: "January 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in the Data:
+
+```{r data}
+
+launches <- read.csv("launches.csv")
+agencies <- read.csv("agencies.csv")
+
+```
+
+Load Packages:
+
+```{r packages, echo = TRUE, warning=FALSE}
+
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ggplot2))
+
+```
+
+Data Wrangling
+
+```{r wrangling}
+
+success_rate <- launches %>%
+  select(launch_year, category, agency_type)
+
+success_rate$outcome <- as.character(success_rate$category)
+success_rate$outcome[success_rate$category == "O"] <- "1"
+success_rate$outcome[success_rate$category == "F"] <- "0"
+success_rate$outcome <- as.numeric(success_rate$outcome)
+
+success_rate$agency_type <- relevel(success_rate$agency_type, ref = "state")
+
+
+```
+
+Creating a binary logistic regression for success/failure of launches over time by sector type:
+
+```{r model}
+
+launch_blr <- glm(outcome ~ launch_year + agency_type, family = binomial, data = success_rate)
+
+
+launch_blr
+summary(launch_blr)
+
+```
+
+As a binomial logistic regression equation: 
+
+$$Log~Odds~(Success) = -86.16 - 0.083(Private) - 1.72(Start Up) + 0.045(Lauch Year)$$
+
+Launches by private organizations had lower chances of success than those by states, while those by start ups had significantly lower chances of success compared to states. For every year later that the launch takes place, its chances of success were 4.5% higher (also significant).
+
+Create new sequences so the binary logistic model calculates predictions for the entire spectrum of years, designated by agenyc type. 
+
+```{r seq}
+
+seq_yr <- rep(seq(from = 1957, to = 2050), 3)
+
+p_94 <- rep("private", 94) # Repeat 'Private' 101 times (to match years data)
+s_94 <- rep("state", 94) # Repeat 'State' 101 times
+su_94 <- rep("startup", 94)
+all_94 <- c(p_94, s_94, su_94) # Combine them into a single vector
+
+launch_newdata <- data.frame(seq_yr, all_94)
+
+colnames(launch_newdata) <- c("launch_year","agency_type")
+
+```
+
+
+Put new data into model make predictions:
+
+```{r pred}
+
+predicted_probs <- predict(launch_blr, newdata = launch_newdata, type = "response", se.fit = TRUE)
+
+graph_data <- data.frame(launch_newdata, predicted_probs$fit, predicted_probs$se.fit)
+
+colnames(graph_data) <- c("Year","Sector","Probability","SE")
+
+```
+
+Graph the Results:
+
+```{r graph}
+
+ggplot(graph_data, aes(x = Year, y = Probability))+
+  geom_line(aes(colour = Sector)) +
+  geom_ribbon(aes(ymin = Probability - SE, ymax = Probability + SE, fill = Sector), alpha = 0.3) +
+  theme_bw() +
+  ylab("Probability of Launch Success") +
+  ggtitle("Probability of Launch Success by Sector (1957 - 2050)") +
+  scale_colour_manual(values = c("mediumaquamarine", "deeppink", "blueviolet")) +
+  scale_fill_manual(values = c("mediumaquamarine", "deeppink", "blueviolet"))
+
+```
+
