@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+###Task 1
+
 Read in the Data:
 
 ```{r data}
@@ -37,9 +39,9 @@ success_rate <- launches %>%
 success_rate$outcome <- as.character(success_rate$category)
 success_rate$outcome[success_rate$category == "O"] <- "1"
 success_rate$outcome[success_rate$category == "F"] <- "0"
-success_rate$outcome <- as.numeric(success_rate$outcome)
+success_rate$outcome <- as.numeric(success_rate$outcome) #create dummy variables with 1 = success and 0 = failure
 
-success_rate$agency_type <- relevel(success_rate$agency_type, ref = "state")
+success_rate$agency_type <- relevel(success_rate$agency_type, ref = "state") #set state as reference level for agency type
 
 
 ```
@@ -48,7 +50,7 @@ Creating a binary logistic regression for success/failure of launches over time 
 
 ```{r model}
 
-launch_blr <- glm(outcome ~ launch_year + agency_type, family = binomial, data = success_rate)
+launch_blr <- glm(outcome ~ launch_year + agency_type, family = binomial, data = success_rate) #create binary model
 
 
 launch_blr
@@ -66,7 +68,7 @@ Create new sequences so the binary logistic model calculates predictions for the
 
 ```{r seq}
 
-seq_yr <- rep(seq(from = 1957, to = 2050), 3)
+seq_yr <- rep(seq(from = 1957, to = 2050), 3) #create full sequence of years of interest 3 times
 
 p_94 <- rep("private", 94) # Repeat 'Private' 101 times (to match years data)
 s_94 <- rep("state", 94) # Repeat 'State' 101 times
@@ -84,11 +86,11 @@ Put new data into model make predictions:
 
 ```{r pred}
 
-predicted_probs <- predict(launch_blr, newdata = launch_newdata, type = "response", se.fit = TRUE)
+predicted_probs <- predict(launch_blr, newdata = launch_newdata, type = "response", se.fit = TRUE) #create predictions using new data through launch_blr
 
-graph_data <- data.frame(launch_newdata, predicted_probs$fit, predicted_probs$se.fit)
+graph_data <- data.frame(launch_newdata, predicted_probs$fit, predicted_probs$se.fit) #create data to graph with predictions that were made and standard errors
 
-colnames(graph_data) <- c("Year","Sector","Probability","SE")
+colnames(graph_data) <- c("Year","Sector","Probability","SE") #rename columns
 
 ```
 
@@ -106,4 +108,6 @@ ggplot(graph_data, aes(x = Year, y = Probability))+
   scale_fill_manual(values = c("mediumaquamarine", "deeppink", "blueviolet"))
 
 ```
+
+###Task 2
 
